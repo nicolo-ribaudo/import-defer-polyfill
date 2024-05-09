@@ -1,5 +1,4 @@
 import { types as t } from "../deps/babel.js";
-import { parse, print } from "../utils/babel.js";
 import {
   evaluateCallHelperFileName,
   evaluateCallHelper,
@@ -90,7 +89,7 @@ function getWrapper(ast, url) {
   return t.program(newBody);
 }
 
-/** @param {ReturnType<typeof parse>} ast  */
+/** @param {ReturnType<typeof import("../deps/babel.js").parse>} ast  */
 function getDeferredModule(ast) {
   const imports = [];
   const eagerImports = new Set();
@@ -235,7 +234,7 @@ function getDeferredModule(ast) {
   );
 }
 
-/** @param {ReturnType<typeof parse>} ast  */
+/** @param {ReturnType<typeof import("../deps/babel.js").parse>} ast  */
 function appendEmptyEvaluate(ast) {
   return t.program([
     ...ast.program.body,
@@ -251,7 +250,7 @@ function appendEmptyEvaluate(ast) {
 }
 
 // Hopefully this will be replaced by https://github.com/babel/babel/issues/16471
-/** @param {ReturnType<typeof parse>} ast  */
+/** @param {ReturnType<typeof import("../deps/babel.js").parse>} ast  */
 function hasTLA(ast) {
   const queue = [ast.program];
   for (const node of queue) {

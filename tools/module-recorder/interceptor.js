@@ -8,6 +8,7 @@ export function transformURL(url) {
   return url;
 }
 
+/** @param {ReturnType<typeof import("../deps/babel.js").parse>} ast  */
 export function transform(ast, url) {
   const depedencies = new Set();
   for (const node of ast.program.body) {

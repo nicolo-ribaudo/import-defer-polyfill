@@ -1,5 +1,6 @@
 import * as moduleRecorder from "./tools/module-recorder/interceptor.js";
 import * as importDeferPolyfill from "./tools/import-defer-polyfill/interceptor.js";
+import { parse, print } from "./tools/utils/babel.js";
 const interceptors = [moduleRecorder, importDeferPolyfill];
 
 addEventListener("activate", function (event) {
@@ -35,14 +36,29 @@ async function fetchWithInterceptors(request, relevantInterceptors) {
 
   let code = await response.text();
 
+  let ast = parse(code, cleanURL);
+  const sources = { [cleanURL]: code };
+  const ignoreSources = new Set([]);
+
   for (const interceptor of relevantInterceptors) {
-    code = await interceptor.transform(
-      code,
+    const { ast: newAst, internalSources } = await interceptor.transform(
+      ast,
       cleanURL,
       request.url,
       instrumentedFetch.bind(fetch)
     );
+    ast = newAst ?? ast;
+    if (internalSources) {
+      Object.assign(sources, internalSources);
+      Object.keys(internalSources).forEach(ignoreSources.add, ignoreSources);
+    }
   }
+
+  code = print(ast, sources, (map) => {
+    map.ignoreList.push(
+      ...map.sources.flatMap((s, i) => (ignoreSources.has(s) ? [i] : []))
+    );
+  });
 
   return new Response(code, {
     headers: {

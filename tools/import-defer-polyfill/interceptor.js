@@ -19,29 +19,21 @@ export function transformURL(url) {
   return urlObj.href;
 }
 
-export function transform(code, url, originalURL) {
-  const ast = parse(code, url);
-
+export function transform(ast, url, originalURL) {
   if (new URL(originalURL).searchParams.has("deferred")) {
     const newAst = hasTLA(ast)
       ? appendEmptyEvaluate(ast)
       : getDeferredModule(ast);
 
-    return print(
-      newAst,
-      { [url]: code, [proxyHelperFileName]: proxyHelperCode },
-      (map) => {
-        map.ignoreList.push(map.sources.indexOf(proxyHelperFileName));
-      }
-    );
+    return {
+      ast: newAst,
+      internalSources: { [proxyHelperFileName]: proxyHelperCode },
+    };
   } else {
-    return print(
-      getWrapper(ast, url),
-      { [evaluateCallHelperFileName]: evaluateCallHelperCode },
-      (map) => {
-        map.ignoreList.push(map.sources.indexOf(evaluateCallHelperFileName));
-      }
-    );
+    return {
+      ast: getWrapper(ast, url),
+      internalSources: { [evaluateCallHelperFileName]: evaluateCallHelperCode },
+    };
   }
 }
 
@@ -177,11 +169,7 @@ function getDeferredModule(ast) {
           t.exportSpecifier(t.identifier(`__${exported.name}`), exported)
         );
         assignments.push(
-          t.assignmentExpression(
-            "=",
-            t.identifier(`__${exported.name}`),
-            local
-          )
+          t.assignmentExpression("=", t.identifier(`__${exported.name}`), local)
         );
       }
     } else if (

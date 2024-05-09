@@ -1,4 +1,3 @@
-import { parse, print } from "../utils/babel.js";
 import { template, types as t } from "../deps/babel.js";
 
 export function matches(url) {
@@ -9,9 +8,7 @@ export function transformURL(url) {
   return url;
 }
 
-export function transform(code, url) {
-  const ast = parse(code, url);
-
+export function transform(ast, url) {
   const depedencies = new Set();
   for (const node of ast.program.body) {
     if (
@@ -40,5 +37,5 @@ export function transform(code, url) {
     `,
   ];
 
-  return print(ast, { [url]: code }, false);
+  return ast;
 }

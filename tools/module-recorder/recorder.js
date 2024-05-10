@@ -1,9 +1,12 @@
+import { hasTLA } from "../utils/ast.js";
+
 const graph = new Map();
 const timeStart = new Map();
 const timeEnd = new Map();
+const asyncModules = new Set();
 
 globalThis.__moduleGraphRecorder = {
-  dependencies(url, dependencies, resolve) {
+  register(url, dependencies, resolve, hasTLA) {
     url = decodeURIComponent(url);
     if (graph.has(url)) return;
     graph.set(
@@ -13,14 +16,17 @@ globalThis.__moduleGraphRecorder = {
         resolved: resolve(specifier),
       }))
     );
+    if (hasTLA) asyncModules.add(url);
   },
   start(url) {
     url = decodeURIComponent(url);
+    if (timeStart.has(url)) return;
     console.time(url);
     timeStart.set(url, performance.now());
   },
   end(url) {
     url = decodeURIComponent(url);
+    if (timeEnd.has(url)) return;
     console.timeEnd(url);
     timeEnd.set(url, performance.now());
   },
@@ -35,7 +41,12 @@ globalThis.__moduleGraphRecorder = {
   __graph: graph,
 };
 
-function buildTree(url, specifier = "<root>", cache = new Map(), path = new Set()) {
+function buildTree(
+  url,
+  specifier = "<root>",
+  cache = new Map(),
+  path = new Set()
+) {
   if (path.has(url)) return { specifier, url, circular: true };
   if (cache.has(url)) return cache.get(url);
 
@@ -46,8 +57,9 @@ function buildTree(url, specifier = "<root>", cache = new Map(), path = new Set(
     url,
     timeStart: timeStart.get(url),
     timeEnd: timeEnd.get(url),
-    durationSelf: round100(getDuration(url)), // I wish I had decimal
-    durationTotal: round100(getTotalDuration(url)),
+    hasTLA: asyncModules.has(url),
+    //durationSelf: round100(getDuration(url)), // I wish I had decimal
+    //durationTotal: round100(getTotalDuration(url)),
     dependencies: [],
   };
   cache.set(url, node);

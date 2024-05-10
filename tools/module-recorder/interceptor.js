@@ -28,21 +28,19 @@ export function transform(ast, url) {
   }
 
   ast.program.body = [
-    t.addComment(
-      t.importDeclaration(
-        [],
-        t.stringLiteral(
-          `data:text/javascript,globalThis.__moduleGraphRecorder?.start(${JSON.stringify(
-            url
-          )})`
-        )
+    depedencies.size > 0 &&
+      t.addComment(
+        t.importDeclaration(
+          [],
+          t.stringLiteral(
+            `data:text/javascript,globalThis.__moduleGraphRecorder?.start(${JSON.stringify(
+              url
+            )})`
+          )
+        ),
+        "leading",
+        "@only-eager"
       ),
-      "leading",
-      "@only-eager"
-    ),
-    statement.ast`
-      /*@hoist*/globalThis.__moduleGraphRecorder?.start(${t.stringLiteral(url)})
-    `,
     statement.ast`
       /*@no-defer*/ globalThis.__moduleGraphRecorder?.register(
         ${t.stringLiteral(url)},
@@ -51,11 +49,17 @@ export function transform(ast, url) {
         ${t.booleanLiteral(hasTLA(ast))}
       );
     `,
+    statement.ast`
+      /*@hoist*/globalThis.__moduleGraphRecorder?.start(${t.stringLiteral(url)})
+    `,
+    statement.ast`
+      globalThis.__moduleGraphRecorder?.startSelf(${t.stringLiteral(url)})
+    `,
     ...ast.program.body,
     statement.ast`
       globalThis.__moduleGraphRecorder?.end(${t.stringLiteral(url)})
     `,
-  ];
+  ].filter(Boolean);
 
   return ast;
 }

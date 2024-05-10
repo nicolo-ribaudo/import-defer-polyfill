@@ -1,4 +1,4 @@
-import { parse } from "../deps/babel.js";
+import { defineHelper } from "../utils/runtime-helpers.js";
 
 export const {
   helper: proxyHelper,
@@ -26,12 +26,3 @@ export const {
   `__$evaluate();`,
   "import-defer-polyfill://import-defer-polyfill/evaluate-call"
 );
-
-function defineHelper(code, filename) {
-  const helper = parse(code, {
-    sourceType: "module",
-    sourceFilename: filename,
-  }).program.body[0];
-  helper.__compact = true;
-  return { helper, filename, code };
-}

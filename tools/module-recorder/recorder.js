@@ -1,9 +1,15 @@
-import { hasTLA } from "../utils/ast.js";
-
 const graph = new Map();
 const timeStart = new Map();
+const timeStartSelf = new Map();
 const timeEnd = new Map();
 const asyncModules = new Set();
+
+const timeTracker = (map, before) => (url) => {
+  url = decodeURIComponent(url);
+  if (map.has(url)) return;
+  before?.(url);
+  map.set(url, performance.now());
+};
 
 globalThis.__moduleGraphRecorder = {
   register(url, dependencies, resolve, hasTLA) {
@@ -18,18 +24,12 @@ globalThis.__moduleGraphRecorder = {
     );
     if (hasTLA) asyncModules.add(url);
   },
-  start(url) {
-    url = decodeURIComponent(url);
-    if (timeStart.has(url)) return;
-    console.time(url);
-    timeStart.set(url, performance.now());
-  },
-  end(url) {
-    url = decodeURIComponent(url);
-    if (timeEnd.has(url)) return;
-    console.timeEnd(url);
-    timeEnd.set(url, performance.now());
-  },
+  start: timeTracker(timeStart),
+  startSelf: timeTracker(timeStartSelf),
+  end: timeTracker(timeEnd, (url) => {
+    const start = timeStart.get(url);
+    while (performance.now() - start < 0.2);
+  }),
   getTrees() {
     const entrypoints = new Set(graph.keys());
     for (const deps of graph.values()) {
@@ -56,10 +56,9 @@ function buildTree(
     specifier,
     url,
     timeStart: timeStart.get(url),
+    timeStartSelf: timeStartSelf.get(url),
     timeEnd: timeEnd.get(url),
     hasTLA: asyncModules.has(url),
-    //durationSelf: round100(getDuration(url)), // I wish I had decimal
-    //durationTotal: round100(getTotalDuration(url)),
     dependencies: [],
   };
   cache.set(url, node);
@@ -71,31 +70,4 @@ function buildTree(
   path.delete(url);
 
   return node;
-}
-
-function getDuration(url) {
-  const start = timeStart.get(url);
-  const end = timeEnd.get(url);
-  return end ? end - start : NaN;
-}
-
-function getTotalDuration(url) {
-  let total = 0;
-
-  const seen = new Set();
-  const queue = [url];
-  while (queue.length > 0) {
-    const next = queue.shift();
-    if (seen.has(next)) continue;
-    seen.add(next);
-    total += timeStart.has(next) ? getDuration(next) : 0;
-    if (Number.isNaN(total)) return NaN;
-    for (const dep of graph.get(next) ?? []) queue.push(dep.resolved);
-  }
-
-  return total;
-}
-
-function round100(value) {
-  return Math.round(value * 100) / 100;
 }

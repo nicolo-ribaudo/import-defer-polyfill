@@ -1,5 +1,5 @@
 import { template, types as t } from "../deps/babel.js";
-import { hasTLA } from "../utils/ast.js";
+import { hasTLA, mapTLA } from "../utils/ast.js";
 
 const statement = template.statement({
   sourceType: "module",
@@ -26,6 +26,23 @@ export function transform(ast, url) {
       depedencies.add(node.source.value);
     }
   }
+
+  mapTLA(ast, (node) => {
+    const { argument } = node;
+    node.argument = template.expression.ast`
+      (globalThis.__moduleGraphRecorder?.pause ?? (_ => _))(
+        ${argument},
+        ${t.stringLiteral(url)}
+      )
+    `;
+    const replacement = template.expression.ast`
+      (globalThis.__moduleGraphRecorder?.resume ?? (_ => _))(
+        ${node},
+        ${t.stringLiteral(url)}
+      )
+    `;
+    return { replacement, next: node };
+  });
 
   ast.program.body = [
     depedencies.size > 0 &&

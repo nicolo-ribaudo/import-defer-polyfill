@@ -1,7 +1,6 @@
 const graph = new Map();
 const timeStart = new Map();
-const timeStartSelf = new Map();
-const timeEnd = new Map();
+const timeRunning = new Map();
 const asyncModules = new Set();
 
 const timeTracker = (map, before) => (url) => {
@@ -10,6 +9,17 @@ const timeTracker = (map, before) => (url) => {
   before?.(url);
   map.set(url, performance.now());
 };
+
+const multiTimeTracker =
+  (map, before) =>
+  (result, url = result) => {
+    url = decodeURIComponent(url);
+    let times = map.get(url);
+    if (!times) map.set(url, (times = []));
+    before?.(times.at(-1));
+    times.push(performance.now());
+    return result;
+  };
 
 globalThis.__moduleGraphRecorder = {
   register(url, dependencies, resolve, hasTLA) {
@@ -25,10 +35,13 @@ globalThis.__moduleGraphRecorder = {
     if (hasTLA) asyncModules.add(url);
   },
   start: timeTracker(timeStart),
-  startSelf: timeTracker(timeStartSelf),
-  end: timeTracker(timeEnd, (url) => {
-    const start = timeStart.get(url);
-    while (performance.now() - start < 0.2);
+  startSelf: multiTimeTracker(timeRunning),
+  resume: multiTimeTracker(timeRunning),
+  end: multiTimeTracker(timeRunning, (prev) => {
+    while (performance.now() - prev < 0.2);
+  }),
+  pause: multiTimeTracker(timeRunning, (prev) => {
+    while (performance.now() - prev < 0.2);
   }),
   getTrees() {
     const entrypoints = new Set(graph.keys());
@@ -56,8 +69,8 @@ function buildTree(
     specifier,
     url,
     timeStart: timeStart.get(url),
-    timeStartSelf: timeStartSelf.get(url),
-    timeEnd: timeEnd.get(url),
+    timeStartSelf: timeRunning.get(url)?.at(0),
+    timeEnd: timeRunning.get(url)?.at(-1),
     hasTLA: asyncModules.has(url),
     dependencies: [],
   };

@@ -1,4 +1,4 @@
-import { types as t } from "../deps/babel.js";
+import { types as t, template } from "../deps/babel.js";
 import { hasTLA } from "../utils/ast.js";
 import {
   evaluateCallHelperFileName,
@@ -93,7 +93,7 @@ function getWrapper(ast, url) {
 /** @param {ReturnType<typeof import("../deps/babel.js").parse>} ast  */
 function getDeferredModule(ast) {
   const imports = [];
-  const eagerImports = new Set();
+  const eagerImports = new Map();
   const proxies = [];
 
   const eagerStatements = [];
@@ -113,7 +113,7 @@ function getDeferredModule(ast) {
     ) {
       if (hasLeadingComment(node, "@only-eager")) continue;
 
-      const clone = t.cloneNode(node);
+      const clone = t.cloneNode(node, true, true);
       clone.source = t.stringLiteral(ensureDeferred(node.source.value));
       imports.push(clone);
       if (clone.phase === "defer") {
@@ -126,7 +126,7 @@ function getDeferredModule(ast) {
         );
         clone.specifiers[0].local = t.cloneNode(tmp);
       } else {
-        eagerImports.add(clone.source.value);
+        eagerImports.set(clone.source.value, node);
       }
       clone.phase = null;
     } else if (node.type === "ExportDefaultDeclaration") {
@@ -188,7 +188,7 @@ function getDeferredModule(ast) {
 
   const functionBodyPrefix = [];
   let i = 0;
-  for (const specifier of eagerImports) {
+  for (const [specifier, originalNode] of eagerImports) {
     imports.push(
       t.importDeclaration(
         [
@@ -201,7 +201,10 @@ function getDeferredModule(ast) {
       )
     );
     functionBodyPrefix.push(
-      t.callExpression(t.identifier(`__$evaluate$${i}`), [])
+      t.inherits(
+        t.callExpression(t.identifier(`__$evaluate$${i}`), []),
+        originalNode
+      )
     );
   }
   functionBody.unshift(
@@ -236,6 +239,9 @@ function getDeferredModule(ast) {
         ),
         []
       ),
+      template.statement.ast`
+        Object.defineProperty(__$evaluate, "name", { value: "(module top-level)", configurable: true })
+      `,
     ].filter(Boolean)
   );
 }

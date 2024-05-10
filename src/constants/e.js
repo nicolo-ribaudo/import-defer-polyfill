@@ -6,7 +6,7 @@ import one from "./naturals/one.js";
 
 let e = one;
 let factorial = 1n;
-for (let i = 1n; i < 300n; i++) {
+for (let i = 1n; i < 100n; i++) {
   factorial *= i;
   e = e.add(one.divide(new BigDecimal(String(factorial)), 100, 6));
 }

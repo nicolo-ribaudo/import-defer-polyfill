@@ -1,6 +1,4 @@
 import one from "./one.js";
+import { double } from "./__utils.js";
 
-// Due to math, 2 can only be computed asynchronously!
-await null;
-
-export default one.add(one);
+export default double(one);

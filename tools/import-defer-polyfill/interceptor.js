@@ -1,3 +1,4 @@
+import { h } from "https://esm.sh/v128/preact@10.19.2/src/index.js";
 import { types as t } from "../deps/babel.js";
 import {
   evaluateCallHelperFileName,
@@ -102,6 +103,7 @@ function getDeferredModule(ast) {
   const exports = [];
 
   const functionBody = [];
+  const hoistedFunctionBody = [];
 
   for (const node of ast.program.body) {
     if (
@@ -109,6 +111,8 @@ function getDeferredModule(ast) {
       (node.type === "ExportNamedDeclaration" && node.source) ||
       (node.type === "ExportAllDeclaration" && node.source)
     ) {
+      if (hasLeadingComment(node, "@only-eager")) continue;
+
       const clone = t.cloneNode(node);
       clone.source = t.stringLiteral(ensureDeferred(node.source.value));
       imports.push(clone);
@@ -171,10 +175,10 @@ function getDeferredModule(ast) {
           t.assignmentExpression("=", t.identifier(`__${exported.name}`), local)
         );
       }
-    } else if (
-      node.leadingComments?.some((c) => c.value.includes("@no-defer"))
-    ) {
+    } else if (hasLeadingComment(node, "@no-defer")) {
       eagerStatements.push(node);
+    } else if (hasLeadingComment(node, "@hoist")) {
+      hoistedFunctionBody.push(node);
     } else {
       functionBody.push(node);
     }
@@ -182,13 +186,7 @@ function getDeferredModule(ast) {
 
   functionBody.push(t.expressionStatement(t.sequenceExpression(assignments)));
 
-  const functionBodyPrefix = [
-    t.assignmentExpression(
-      "=",
-      t.identifier("__$evaluate"),
-      t.arrowFunctionExpression([], t.blockStatement([]))
-    ),
-  ];
+  const functionBodyPrefix = [];
   let i = 0;
   for (const specifier of eagerImports) {
     imports.push(
@@ -207,6 +205,14 @@ function getDeferredModule(ast) {
     );
   }
   functionBody.unshift(
+    t.expressionStatement(
+      t.assignmentExpression(
+        "=",
+        t.identifier("__$evaluate"),
+        t.arrowFunctionExpression([], t.blockStatement([]))
+      )
+    ),
+    ...hoistedFunctionBody,
     t.expressionStatement(t.sequenceExpression(functionBodyPrefix))
   );
 
@@ -291,4 +297,8 @@ function ensureDeferred(url) {
     return `${url}&deferred`;
   }
   return url;
+}
+
+function hasLeadingComment(node, value) {
+  return node.leadingComments?.some((c) => c.value.includes(value));
 }

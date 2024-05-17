@@ -65,12 +65,21 @@ function buildTree(
 
   path.add(url);
 
+  const timeSelf = [];
+  const recorded = timeRunning.get(url);
+  if (recorded) {
+    for (let i = 0; i < recorded.length; i += 2) {
+      timeSelf.push([recorded[i], recorded[i + 1]]);
+    }
+  }
+
   const node = {
     specifier,
     url,
     timeStart: timeStart.get(url),
     timeStartSelf: timeRunning.get(url)?.at(0),
     timeEnd: timeRunning.get(url)?.at(-1),
+    timeSelf,
     hasTLA: asyncModules.has(url),
     dependencies: [],
   };

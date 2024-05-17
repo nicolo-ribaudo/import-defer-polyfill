@@ -149,15 +149,20 @@ export class ModuleTreeVisualizer {
           <br><em>Duration (self):</em> ${round(d.durationSelf)}ms
             (start: ${round(d.timeStartSelf)}ms,
             end: ${round(d.timeStartSelf + d.durationSelf)}ms)
-          ${d.hasTLA ? `<br><em>Has TLA</em>` : ""}
-          <br><em>Stack:</em>
-          <ul>
-            ${d.stack
-              .toReversed()
-              .map((url) => `<li>${url}</li>`)
-              .join("")}
-          </ul>
         `;
+        if (d.hasTLA) {
+          html += `<br><em>Has TLA</em>`;
+        }
+        if (d.stack.length > 0) {
+          html += `
+            <br><em>Stack:</em>
+            <ul>
+          `;
+          for (const url of d.stack.toReversed()) {
+            html += `<li>${url}</li>`;
+          }
+          html += `</ul>`;
+        }
         if (d.dependencies.length > 0) {
           html += `
             <br><em>Dependencies:</em>

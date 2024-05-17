@@ -223,7 +223,7 @@ class ModuleTreeVisualizer {
             end: ${round(d.timeStartSelf + d.durationSelf)}ms)
         `;
         if (d.trigger) {
-          html += `<br><em>Execution caused by:</em>`;
+          html += `<br><em>Deferred execution caused by:</em>`;
           d.trigger.forEach((frame, i) => {
             if (i === 0) frame = frame.replace("    at ", "");
             html += `<br>&nbsp;&nbsp;&nbsp;${frame}`;

@@ -4,7 +4,7 @@ import two from "./naturals/two.js";
 let low = one;
 let high = two;
 
-for (let i = 0n; i < 250n; i++) {
+for (let i = 0n; i < 100n; i++) {
   const next = low.add(high).divide(two);
   if (next.multiply(next).compareTo(two) > 0) {
     high = next;

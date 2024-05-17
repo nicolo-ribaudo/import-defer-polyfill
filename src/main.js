@@ -12,6 +12,8 @@ const showE = signal(false);
 const showLN2 = signal(false);
 const showSQRT2 = signal(false);
 
+setTimeout(() => { showSQRT2.value = true; }, 10);
+
 function App() {
   return html`
     <div>

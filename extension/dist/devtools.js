@@ -230,7 +230,7 @@ class ModuleTreeVisualizer {
             <br><em>Stack:</em>
             <ul>
           `;
-          for (const { url, deferred } of d.stack.toReversed()) {
+          for (const { url, deferred } of d.stack) {
             html += `<li>${deferred ? "(deferred)" : ""}${url}</li>`;
           }
           html += `</ul>`;

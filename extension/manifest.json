@@ -1,0 +1,6 @@
+{
+  "manifest_version": 3,
+  "name": "Import Defer support",
+  "version": "0.1.0",
+  "devtools_page": "devtools.html"
+}

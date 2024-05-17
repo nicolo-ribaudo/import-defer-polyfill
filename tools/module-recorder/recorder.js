@@ -22,14 +22,17 @@ const multiTimeTracker =
   };
 
 globalThis.__moduleGraphRecorder = {
-  register(url, dependencies, resolve, hasTLA) {
+  register(url, dependencies, resolve, hasTLA, deferredImportsIndexes) {
     url = decodeURIComponent(url);
     if (graph.has(url)) return;
+
+    const deferred = new Set(deferredImportsIndexes);
     graph.set(
       url,
-      dependencies.map((specifier) => ({
+      dependencies.map((specifier, i) => ({
         specifier,
         resolved: resolve(specifier),
+        deferred: deferred.has(i),
       }))
     );
     if (hasTLA) asyncModules.add(url);
@@ -85,8 +88,11 @@ function buildTree(
   };
   cache.set(url, node);
 
-  for (const { specifier, resolved } of graph.get(url) ?? []) {
-    node.dependencies.push(buildTree(resolved, specifier, cache));
+  for (const { specifier, resolved, deferred } of graph.get(url) ?? []) {
+    node.dependencies.push({
+      deferred,
+      module: buildTree(resolved, specifier, cache),
+    });
   }
 
   path.delete(url);

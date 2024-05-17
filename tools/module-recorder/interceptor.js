@@ -16,14 +16,14 @@ export function transformURL(url) {
 
 /** @param {ReturnType<typeof import("../deps/babel.js").parse>} ast  */
 export function transform(ast, url) {
-  const depedencies = new Set();
+  const depedencies = new Map();
   for (const node of ast.program.body) {
     if (
       node.type === "ImportDeclaration" ||
       (node.type === "ExportNamedDeclaration" && node.source) ||
       (node.type === "ExportAllDeclaration" && node.source)
     ) {
-      depedencies.add(node.source.value);
+      depedencies.set(node.source.value, node.phase === "defer");
     }
   }
 
@@ -44,6 +44,8 @@ export function transform(ast, url) {
     return { replacement, next: node };
   });
 
+  const dependenciesArray = Array.from(depedencies.keys());
+
   ast.program.body = [
     depedencies.size > 0 &&
       t.addComment(
@@ -61,9 +63,14 @@ export function transform(ast, url) {
     statement.ast`
       /*@no-defer*/ globalThis.__moduleGraphRecorder?.register(
         ${t.stringLiteral(url)},
-        ${t.valueToNode([...depedencies])},
+        ${t.valueToNode(dependenciesArray)},
         import.meta.resolve,
-        ${t.booleanLiteral(hasTLA(ast))}
+        ${t.booleanLiteral(hasTLA(ast))},
+        ${t.valueToNode(
+          dependenciesArray
+            .map((_, index) => index)
+            .filter((index) => depedencies.get(dependenciesArray[index]))
+        )}
       );
     `,
     statement.ast`

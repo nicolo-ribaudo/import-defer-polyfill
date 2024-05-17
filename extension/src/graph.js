@@ -135,7 +135,8 @@ export class ModuleTreeVisualizer {
           .style("left", event.pageX + "px")
           .style("top", rect.bottom + "px")
           .style("opacity", 1);
-        tooltip.html(`
+
+        let html = `
           <strong>${d.url}</strong>
           <br><em>Duration (total):</em>
               ${round(d.durationDeps + d.durationSelf)}ms
@@ -152,22 +153,28 @@ export class ModuleTreeVisualizer {
               .map((url) => `<li>${url}</li>`)
               .join("")}
           </ul>
-          ${
-            d.dependencies.length === 0
-              ? ""
-              : `
-                  <br><em>Dependencies:</em>
-                  <ul>
-                      ${d.dependencies
-                        .map(
-                          ({ url, deferred }) =>
-                            `<li>${deferred ? "(defer) " : ""}${url}</li>`
-                        )
-                        .join("")}
-                  </ul>
-                `
+        `;
+        if (d.dependencies.length > 0) {
+          html += `
+            <br><em>Dependencies:</em>
+            <ul>
+          `;
+
+          for (const {
+            url,
+            deferred,
+            alreadyEvaluated,
+            timeStart,
+          } of d.dependencies) {
+            html += `<li>
+              ${deferred ? "(defer)" : ""}
+              ${alreadyEvaluated ? `(already evaluated at ${timeStart}ms)` : ""}
+              ${url}
+            </li>`;
           }
-        `);
+          html += `</ul>`;
+        }
+        tooltip.html(html);
       })
       .on("mouseout", () => {
         tooltip.style("opacity", 0);
@@ -219,6 +226,9 @@ export class ModuleTreeVisualizer {
     const path = new Set();
     const nodes = [];
     const used = new Set();
+
+    console.log(tree);
+
     const recurse = (node, depth, onlyAsync) => {
       if (path.has(node.url)) return;
       path.add(node.url);
@@ -240,7 +250,12 @@ export class ModuleTreeVisualizer {
             hasTLA: node.hasTLA,
             stack: Array.from(path),
             dependencies: node.dependencies.map(
-              ({ module: child, deferred }) => ({ url: child.url, deferred })
+              ({ module: child, deferred }) => ({
+                url: child.url,
+                deferred,
+                alreadyEvaluated: child.timeStart < node.timeStart,
+                timeStart: round(child.timeStart, 3),
+              })
             ),
           });
         }

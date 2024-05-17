@@ -158,8 +158,8 @@ export class ModuleTreeVisualizer {
             <br><em>Stack:</em>
             <ul>
           `;
-          for (const url of d.stack.toReversed()) {
-            html += `<li>${url}</li>`;
+          for (const { url, deferred } of d.stack.toReversed()) {
+            html += `<li>${deferred ? "(deferred)" : ""}${url}</li>`;
           }
           html += `</ul>`;
         }
@@ -232,15 +232,13 @@ export class ModuleTreeVisualizer {
   }
 
   #normalizeData(tree) {
-    const path = new Set();
+    const path = new Map();
     const nodes = [];
     const used = new Set();
 
-    console.log(tree);
-
     const recurse = (node, depth, onlyAsync) => {
       if (path.has(node.url)) return;
-      path.add(node.url);
+      path.set(node.url, node.timeStart);
 
       if (node.timeStartSelf !== undefined && (!onlyAsync || node.hasTLA)) {
         if (!used.has(node.url)) {
@@ -257,7 +255,10 @@ export class ModuleTreeVisualizer {
               duration: round(end - start, 3),
             })),
             hasTLA: node.hasTLA,
-            stack: Array.from(path),
+            stack: Array.from(path).map(([url, timeStart]) => ({
+              url,
+              deferred: timeStart === undefined || timeStart > node.timeStart,
+            })),
             dependencies: node.dependencies.map(
               ({ module: child, deferred }) => ({
                 url: child.url,

@@ -105,6 +105,10 @@ class ModuleTreeVisualizer {
     this.setTree(tree);
   }
 
+  get scale() {
+    return this.#scale;
+  }
+
   increaseScale() {
     this.#scale *= 1.25;
     return this;
@@ -385,11 +389,15 @@ chrome.devtools.panels.create("Modules", "", "panel.html", (panel) => {
     const trees = await evalInPage("__moduleGraphRecorder.getTrees()");
     const tree = trees[0];
 
+    const $container = window.document.querySelector("#chart-container");
+    const $chart = window.document.querySelector("#chart");
+    const $tooltip = window.document.querySelector("#tooltip");
+
     const visualizer = new ModuleTreeVisualizer({
-      minWidth: window.document.body.getBoundingClientRect().width,
+      minWidth: $container.getBoundingClientRect().width,
       cellHeight: 20,
-      svg: window.document.querySelector("#chart"),
-      tooltip: window.document.querySelector("#tooltip"),
+      svg: $chart,
+      tooltip: $tooltip,
       tree,
     });
     visualizer.render();
@@ -398,10 +406,14 @@ chrome.devtools.panels.create("Modules", "", "panel.html", (panel) => {
       window.document.getElementById(id).addEventListener("click", callback);
     };
     on("zoom-in", () => {
+      const oldScale = visualizer.scale;
       visualizer.increaseScale().render();
+      $container.scrollLeft *= visualizer.scale / oldScale;
     });
     on("zoom-out", () => {
+      const oldScale = visualizer.scale;
       visualizer.decreaseScale().render();
+      $container.scrollLeft *= visualizer.scale / oldScale;
     });
     on("refresh", async () => {
       const trees = await evalInPage("__moduleGraphRecorder.getTrees()");

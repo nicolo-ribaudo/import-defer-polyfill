@@ -31,6 +31,10 @@ export class ModuleTreeVisualizer {
     this.setTree(tree);
   }
 
+  get scale() {
+    return this.#scale;
+  }
+
   increaseScale() {
     this.#scale *= 1.25;
     return this;

@@ -150,6 +150,13 @@ export class ModuleTreeVisualizer {
             (start: ${round(d.timeStartSelf)}ms,
             end: ${round(d.timeStartSelf + d.durationSelf)}ms)
         `;
+        if (d.trigger) {
+          html += `<br><em>Execution caused by:</em>`;
+          d.trigger.forEach((frame, i) => {
+            if (i === 0) frame = frame.replace("    at ", "");
+            html += `<br>&nbsp;&nbsp;&nbsp;${frame}`;
+          });
+        }
         if (d.hasTLA) {
           html += `<br><em>Has TLA</em>`;
         }
@@ -243,9 +250,20 @@ export class ModuleTreeVisualizer {
       if (node.timeStartSelf !== undefined && (!onlyAsync || node.hasTLA)) {
         if (!used.has(node.url)) {
           used.add(node.url);
+
+          const stack = node.stack?.split("\n");
+          const trigger =
+            stack &&
+            stack.length > 3 &&
+            !stack[3].includes("(module top-level)")
+              ? stack.slice(3)
+              : null;
+          console.log(node.url, trigger, stack);
+
           nodes.push({
             url: node.url,
             depth,
+            trigger,
             timeStart: round(node.timeStart, 3),
             timeStartSelf: round(node.timeStartSelf, 3),
             durationDeps: round(node.timeStartSelf - node.timeStart, 3),
